@@ -12,6 +12,7 @@
 #include "sdk/flash.h"
 #include "flash_eep.h"
 #include "tcp2uart.h"
+#include "web_iohw.h"
 #ifdef USE_RS485DRV
 #include "driver/rs485drv.h"
 #endif
@@ -54,6 +55,72 @@ extern void uart0_write_char(char c);
 #define os_post ets_post
 #define os_task ets_task
 #define mMIN(a, b)  ((a<b)?a:b)
+
+/// Таймаут до момента отключения RTS в символах.
+/// Должен быть >0, потому что на этой базе работает хак для
+/// отключения RTS (по событию RXFIFO_TOUT).
+/// (для Modbus, например, должен быть больше 1.5 и меньше 3.5)
+/// Ставим 2 по умолчанию, можно попробовать 1 или 3
+#define TX_TIMEOUT 2
+
+/// Номер GPIO для RTS
+#define RTS_GPIO 15
+
+static uint32 rts_mask DATA_IRAM_ATTR;
+
+#define uart_set_rts()	 GPIO_OUT_W1TS = rts_mask
+#define uart_reset_rts() GPIO_OUT_W1TC = rts_mask
+
+#define uart_init_rts() do { \
+	rts_mask = (1 << RTS_GPIO); \
+	GPIO_ENABLE_W1TS = rts_mask; \
+	set_gpiox_mux_func_ioport(RTS_GPIO);\
+} while(0)
+
+/// Режим работы UART (для RTS)
+static uint32 uart_mode_rx DATA_IRAM_ATTR = 1;
+
+/// Предыдущее значение таймаута RxFifo
+static uint32 uart_prev_rxtout DATA_IRAM_ATTR = 0;
+
+/// Переключение UART в режим передачи
+///  * включить RTS
+///  * сбросить буфер приёма
+///  * включить Loopback
+///  * включить таймаут на RX
+static void switch_to_tx(void) {
+	DEBUG_OUT('[');
+	uart_mode_rx = 0;
+	uart_set_rts();
+	uint32 conf0 = (UART0_CONF0 & (~ (UART_RXFIFO_RST))) | UART_LOOPBACK;
+	UART0_CONF0 = conf0 | UART_RXFIFO_RST;
+	UART0_CONF0 = conf0;
+	/* save previous timeout */
+	if (uart_prev_rxtout == 0) {
+		uart_prev_rxtout = UART0_CONF1 & (UART_RX_TOUT_THRHD << UART_RX_TOUT_THRHD_S);
+		uint32 uc = UART0_CONF1 & ~(UART_RX_TOUT_THRHD << UART_RX_TOUT_THRHD_S);
+		UART0_CONF1 = uc | (TX_TIMEOUT << UART_RX_TOUT_THRHD_S);
+	}
+};
+
+/// Переключение UART в режим приёма
+///  * сбросить RTS
+///  * отключить Loopback
+///  * сбросить буфер приёма
+///  * вернуть таймаут на место
+static void switch_to_rx(void) {
+	DEBUG_OUT(']');
+	uart_mode_rx = 1;
+	uart_reset_rts();
+	uint32 conf0 = UART0_CONF0 & (~ (UART_RXFIFO_RST | UART_LOOPBACK));
+	UART0_CONF0 = conf0 | UART_RXFIFO_RST;
+	UART0_CONF0 = conf0;
+	if (uart_prev_rxtout != 0) {
+		uint32 uc = UART0_CONF1 & ~(UART_RX_TOUT_THRHD << UART_RX_TOUT_THRHD_S);
+		UART0_CONF1 = uc | uart_prev_rxtout;
+		uart_prev_rxtout = 0;
+	}
+}
 
 suart_drv uart_drv DATA_IRAM_ATTR;
 
@@ -120,6 +187,7 @@ void ICACHE_FLASH_ATTR update_mux_uart0(void)
 		MUX_RX_UART0 = VAL_MUX_RX_UART0_OFF;
 		MUX_RTS_UART0 = VAL_MUX_RTS_UART0_OFF;
 		MUX_CTS_UART0 = VAL_MUX_CTS_UART0_OFF;
+		uart_init_rts();
 	}
 	else
 #endif
@@ -148,6 +216,7 @@ void ICACHE_FLASH_ATTR update_mux_uart0(void)
 			else {
 				MUX_RTS_UART0 = VAL_MUX_RTS_UART0_OFF;
 				MUX_CTS_UART0 = VAL_MUX_CTS_UART0_OFF;
+				uart_init_rts();
 			}
 		}
 	}
@@ -320,6 +389,7 @@ uint32 uart_tx_buf(uint8 *buf, uint32 count)
 			ets_intr_unlock(); // ETS_UART_INTR_ENABLE();
 			break;
 		}
+		switch_to_tx();
 		UART0_FIFO = buf[len++];
 	};
 	return len;
@@ -350,6 +420,10 @@ bool ICACHE_FLASH_ATTR uart_drv_start(void)
 {
 		uart_drv_close();
 		DEBUG_OUT('S');
+#ifdef USE_TCP2UART
+		uart_init_rts();
+		switch_to_rx();
+#endif
 		if(uart_drv.uart_tx_next_chars  == NULL || uart_drv.uart_send_rx_blk  == NULL) return false;
 		uart_drv.uart_rx_buf = os_malloc(UART_RX_BUF_MAX);
 		uart_drv.uart_rx_buf_count = 0;
@@ -432,48 +506,55 @@ void uart_intr_handler(void *para)
 				//uart_rx_clr_buf(); // сбросить rx fifo, ошибки приема и буфер
 			}
 			if(uart_drv.uart_rx_buf != NULL) { // соединение открыто?
-				if (ints & (UART_RXFIFO_FULL_INT_ST | UART_RXFIFO_TOUT_INT_ST)) { // прерывание по приему символов или Rx time-out event? да
-					uint32 uart_rx_buf_count = uart_drv.uart_rx_buf_count;
-//					DEBUG_OUT('R');
-					if(uart_drv.uart_nsnd_buf_count >= UART_RX_BUF_MAX //) { // накопился не переданный большой блок?
-						|| uart_rx_buf_count >= UART_RX_BUF_MAX) { // буфер заполнен?
-						DEBUG_OUT('@');
-						// отключим прерывание приема, должен выставиться RTS
-						UART0_INT_ENA &= ~(UART_RXFIFO_FULL_INT_ENA | UART_RXFIFO_TOUT_INT_ENA);
-					}
-					else { // продожим прием в буфер
-						if((UART0_STATUS >> UART_RXFIFO_CNT_S) & UART_RXFIFO_CNT) {
-							do {
-								if(uart_rx_buf_count >= UART_RX_BUF_MAX) { // буфер заполнен?
-									DEBUG_OUT('#');
-									// отключим прерывание приема, должен выставиться RTS
-									UART0_INT_ENA &= ~(UART_RXFIFO_FULL_INT_ENA | UART_RXFIFO_TOUT_INT_ENA);
-									break;
+				if (uart_mode_rx) { // приём данных, RTS выключен, ждём данных извне
+					if (ints & (UART_RXFIFO_FULL_INT_ST | UART_RXFIFO_TOUT_INT_ST)) { // прерывание по приему символов или Rx time-out event? да
+						uint32 uart_rx_buf_count = uart_drv.uart_rx_buf_count;
+	//					DEBUG_OUT('R');
+						if(uart_drv.uart_nsnd_buf_count >= UART_RX_BUF_MAX //) { // накопился не переданный большой блок?
+							|| uart_rx_buf_count >= UART_RX_BUF_MAX) { // буфер заполнен?
+							DEBUG_OUT('@');
+							// отключим прерывание приема, должен выставиться RTS
+							UART0_INT_ENA &= ~(UART_RXFIFO_FULL_INT_ENA | UART_RXFIFO_TOUT_INT_ENA);
+						}
+						else { // продожим прием в буфер
+							if((UART0_STATUS >> UART_RXFIFO_CNT_S) & UART_RXFIFO_CNT) {
+								do {
+									if(uart_rx_buf_count >= UART_RX_BUF_MAX) { // буфер заполнен?
+										DEBUG_OUT('#');
+										// отключим прерывание приема, должен выставиться RTS
+										UART0_INT_ENA &= ~(UART_RXFIFO_FULL_INT_ENA | UART_RXFIFO_TOUT_INT_ENA);
+										break;
+									}
+									// скопируем символ в буфер
+									uart_drv.uart_rx_buf[uart_rx_buf_count++] = UART0_FIFO;
+								} while((UART0_STATUS >> UART_RXFIFO_CNT_S) & UART_RXFIFO_CNT);
+							};
+							uart_drv.uart_rx_buf_count = uart_rx_buf_count; // счет в буфере
+							//
+							uart_rx_buf_count -=  uart_drv.uart_out_buf_count; // кол-во принятых и ещё не переданных из прерывания UART символов
+							if(uart_rx_buf_count != 0) {
+								if((ints & UART_RXFIFO_TOUT_INT_ST) != 0) { // межсимвольная пауза (конец блока)?
+									DEBUG_OUT('|');
+									os_post(UART_TASK_PRIO + SDK_TASK_PRIO, UART_RX_CHARS, uart_rx_buf_count); // пришла добавочка
+									uart_drv.uart_nsnd_buf_count += uart_rx_buf_count; // счет отосланного
+									uart_drv.uart_out_buf_count = uart_drv.uart_rx_buf_count;
 								}
-								// скопируем символ в буфер
-								uart_drv.uart_rx_buf[uart_rx_buf_count++] = UART0_FIFO;
-							} while((UART0_STATUS >> UART_RXFIFO_CNT_S) & UART_RXFIFO_CNT);
-						};
-						uart_drv.uart_rx_buf_count = uart_rx_buf_count; // счет в буфере
-						//
-						uart_rx_buf_count -=  uart_drv.uart_out_buf_count; // кол-во принятых и ещё не переданных из прерывания UART символов
-						if(uart_rx_buf_count != 0) {
-							if((ints & UART_RXFIFO_TOUT_INT_ST) != 0) { // межсимвольная пауза (конец блока)?
-								DEBUG_OUT('|');
-								os_post(UART_TASK_PRIO + SDK_TASK_PRIO, UART_RX_CHARS, uart_rx_buf_count); // пришла добавочка
-								uart_drv.uart_nsnd_buf_count += uart_rx_buf_count; // счет отосланного
-								uart_drv.uart_out_buf_count = uart_drv.uart_rx_buf_count;
-							}
-							else if(uart_drv.uart_nsnd_buf_count < (TCP_MSS*2) // ещё влезет в буфер передачи TCP?
-								&& uart_rx_buf_count + uart_drv.uart_nsnd_buf_count >= (TCP_MSS*2)) { // накопился большой не переданный блок в TCP?
-								uart_rx_buf_count = (TCP_MSS*2) - uart_drv.uart_nsnd_buf_count;	// добавочка до (TCP_MSS*2)
-								os_post(UART_TASK_PRIO + SDK_TASK_PRIO, UART_RX_CHARS, uart_rx_buf_count); // добавочка до (TCP_MSS*2)
-								uart_drv.uart_nsnd_buf_count = (TCP_MSS*2); // счет отосланного
-								uart_drv.uart_out_buf_count += uart_rx_buf_count;
+								else if(uart_drv.uart_nsnd_buf_count < (TCP_MSS*2) // ещё влезет в буфер передачи TCP?
+									&& uart_rx_buf_count + uart_drv.uart_nsnd_buf_count >= (TCP_MSS*2)) { // накопился большой не переданный блок в TCP?
+									uart_rx_buf_count = (TCP_MSS*2) - uart_drv.uart_nsnd_buf_count;	// добавочка до (TCP_MSS*2)
+									os_post(UART_TASK_PRIO + SDK_TASK_PRIO, UART_RX_CHARS, uart_rx_buf_count); // добавочка до (TCP_MSS*2)
+									uart_drv.uart_nsnd_buf_count = (TCP_MSS*2); // счет отосланного
+									uart_drv.uart_out_buf_count += uart_rx_buf_count;
+								};
 							};
 						};
 					};
-				};
+				} else { // передача, здесь мы ждём таймаута или чего-нибудь такого для того, чтобы отключить RTS
+					if (ints & (UART_RXFIFO_FULL_INT_ST | UART_RXFIFO_TOUT_INT_ST)) {
+						switch_to_rx();
+						// буфер уже очистился, флаг прерывания будет снят ниже
+					}
+				}
 				if (ints & UART_TXFIFO_EMPTY_INT_ST) { // fifo tx пусто?
 //					DEBUG_OUT('W');
 					os_post(UART_TASK_PRIO + SDK_TASK_PRIO, UART_TX_CHARS, ints);
