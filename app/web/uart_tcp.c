@@ -194,7 +194,7 @@ void ICACHE_FLASH_ATTR update_mux_uart0(void)
 	{
 		if(PERI_IO_SWAP & PERI_IO_UART0_PIN_SWAP) { // swap uart0 pins (u0rxd <-> u0cts), (u0txd <-> u0rts) ?
 			MUX_RTS_UART0 = VAL_FUNC_U0RTS | PULLDIS; // GPIO15/TX0, output
-			MUX_CTS_UART0 = VAL_FUNC_U0CTS | ((UART0_CONF0 & UART_RXD_INV)? PULLDOWN : PULLUP); // GPIO13/RX0, input
+			MUX_CTS_UART0 = VAL_FUNC_U0CTS; // | ((UART0_CONF0 & UART_RXD_INV)? PULLDOWN : PULLUP); // GPIO13/RX0, input
 			if(uart0_flow_ctrl_flg) { // включен flow
 		    	update_rts0();
 		    	MUX_TX_UART0 = VAL_FUNC_U0TX | PULLDIS; // GPIO1/RTS, output
@@ -207,7 +207,7 @@ void ICACHE_FLASH_ATTR update_mux_uart0(void)
 		}
 		else {
 			MUX_TX_UART0 = VAL_FUNC_U0TX; // GPIO1/TX0, output
-			MUX_RX_UART0 = VAL_FUNC_U0RX | ((UART0_CONF0 & UART_RXD_INV)? PULLDOWN : PULLUP);  // GPIO3/RX0, input
+			MUX_RX_UART0 = VAL_FUNC_U0RX; // | ((UART0_CONF0 & UART_RXD_INV)? PULLDOWN : PULLUP);  // GPIO3/RX0, input
 			if(uart0_flow_ctrl_flg) { // включен flow
 		    	update_rts0();
 		    	MUX_RTS_UART0 = VAL_FUNC_U0RTS | PULLDIS; // GPIO15/RTS, output
