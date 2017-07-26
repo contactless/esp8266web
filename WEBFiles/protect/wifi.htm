@@ -1,185 +1,490 @@
 <!DOCTYPE html>
-<html><head>
-	<meta http-equiv="Content-type" content="text/html; charset=windows-1251">
-	<title>ESP8266 WiFi</title>
-	<link rel="stylesheet" href="/style.css">
-	<script src="/scripts.js"></script>
-</head><body>
-	~inc:menu.inc~
-	<div class="content">
-		<form method='post' action='/timeout.htm'>
-		<input type='hidden' name='wifi_rdcfg' value='0xffffffff'>
-		<table class="form">
-			<tr>
-				<td colspan="2"><h2 class="title">WiFi SoftAP</h2></td>
-				<td colspan="2"><h2 class="title">WiFi Station</h2></td>
-			</tr>
-			<tr>
-			   <td class="label">WiFi Mode:</td>
-				<td><select name='wifi_mode'>
-					<option value='1'>STATION_MODE</option>
-					<option value='2'>SOFTAP_MODE</option>
-					<option value='3'>STATIONAP_MODE</option>
-				</select></td>
-				<td class="label">SSID:</td>
-				<td><input name='wifi_st_ssid' maxlength='31' value='~wifi_st_ssid~'></td>
-			</tr>
-			<tr>
-				<td class="label">AP SSID:</td>
-				<td><input name='wifi_ap_ssid' maxlength='31' value='~wifi_ap_ssid~'></td>
-				<td class="label">Password:</td>
-				<td><input name='wifi_st_psw' maxlength='63' value='~wifi_st_psw~'></td>
-			</tr>
-			<tr>
-				<td class="label">Hidden SSID:</td>
-				<td>
-					<input type='hidden' name='wifi_ap_hssid' value='0'>
-					<input type='checkbox' name='wifi_ap_hssid' value='1'>
-				</td>
-				<td class="label">BSSID:</td>
-				<td><input name='wifi_st_bssid' maxlength='17' value='~wifi_st_bssid~'></td>
-			</tr>
-			<tr>
-				<td class="label">AP Password:</td>
-				<td><input name='wifi_ap_psw' maxlength='63' value='~wifi_ap_psw~'></td>
-				<td class="label">Use BSSID:</td>
-				<td>
-					<input type='hidden' name='wifi_st_sbss' value='0'>
-					<input type='checkbox' name='wifi_st_sbss' value='1'>
-				</td>
- 			</tr>
-			<tr>
-				<td class="label">Channel:</td>
-				<td><select name='wifi_ap_chl'>
-					<option value='0'>auto</option>
-				</select></td>
-				<td class="label">Status:</td>
-				<td><select name='wifi_st_sta'>
-					<option value='0'>IDLE</option>
-					<option value='1'>CONNECTING</option>
-					<option value='2'>WRONG_PASSWORD</option>
-					<option value='3'>NO_AP_FOUND</option>
-					<option value='4'>CONNECT_FAIL</option>
-					<option value='5'>GOT_IP</option>
-					<option value='6'>OFF</option>
-				</select></td>
-			</tr>
-			<tr>
-				<td class="label">IEEE PHY:</td>
-				<td><select name='wifi_phy'>
-					<option value='1'>802.11b</option>
-					<option value='2'>802.11g</option>
-					<option value='3'>802.11n</option>
-				</select></td>
-				<td class="label">IP:</td>
-				<td><input type='text' title='Static ip, if dhcp: off' name='wifi_st_ip' maxlength='31' value='~wifi_st_ip~'></td>
-			</tr>
-			<tr>
-				<td class="label">Auth Mode:</td>
-				<td><select title="Don't support AUTH_WEP in softAP mode"  name='wifi_ap_auth'>
-					<option value='0'>OPEN</option>
-					<option value='1'>WEP</option>
-					<option value='2'>WPA_PSK</option>
-					<option value='3'>WPA2_PSK</option>
-					<option value='4'>WPA_WPA2_PSK</option>
-				</select></td>
-				<td class="label">Subnet Mask:</td>
-				<td><input name='wifi_st_msk' maxlength='31' value='~wifi_st_msk~'></td>
-			</tr>
-			<tr>
-				<td class="label">IP:</td>
-				<td><input name='wifi_ap_ip' maxlength='31' value='~wifi_ap_ip~'></td>
-				<td class="label">Gateway:</td>
-				<td><input name='wifi_st_gw' maxlength='31' value='~wifi_st_gw~'></td>
-			</tr>
-			<tr>
-				<td class="label">Subnet Mask:</td>
-				<td><input type='text' name='wifi_ap_msk' maxlength='31' value='~wifi_ap_msk~'></td>
-				<td class="label">AutoConnect:</td>
-				<td>
-					<input type='hidden' name='wifi_st_aucn' value='0'>
-					<input type='checkbox' name='wifi_st_aucn' value='1'>
-				</td>
-			</tr>
-			<tr>
-				<td class="label">Gateway:</td>
-				<td><input name='wifi_ap_gw' maxlength='31' value='~wifi_ap_gw~'></td>
-				<td class="label">ReConnect:</td>
-				<td><input name='wifi_st_rect' title='Reconnect 2..8192 sec. =0 reconnect off, =1 standard reconnect' maxlength='4' value='~wifi_st_rect~'></td>
-			</tr>
-			<tr>
-				<td class="label">MAC:</td>
-				<td><input name='wifi_ap_mac' maxlength='17' value='~wifi_ap_mac~'></td>
-				<td class="label">MAC:</td>
-				<td><input name='wifi_st_mac' maxlength='17' value='~wifi_st_mac~'></td>
-			</tr>
-			<tr>
-				<td class="label">DHCP:</td>
-				<td>
-					<input type='hidden' name='wifi_ap_dhcp' value='0'>
-					<input type='checkbox' name='wifi_ap_dhcp' value='1'>
-				</td>
-				<td class="label">DHCP:</td>
-				<td>
-					<input type='hidden' name='wifi_st_dhcp' value='0'>
-					<input type='checkbox' title='Off: static ip, On: dhcp' name='wifi_st_dhcp' value='1'>
-				</td>
-			</tr>
-			<tr>
-				<td class="label">Start IP:</td>
-				<td><input name='wifi_ap_sip' maxlength='31' value='~wifi_ap_sip~'></td>
-				<td class="label">RSSI:</td>
-				<td>~wifi_st_rssi~ dB</td>
-			</tr>
-			<tr>
-				<td class="label">End IP:</td>
-				<td><input name='wifi_ap_eip' maxlength='31' value='~wifi_ap_eip~'></td>
-				<td class="label">Sleep Mode:</td>
-				<td><select title='Not use LIGHT = TCP errors.' name='wifi_sleep'>
-					<option value='0'>NONE</option>
-					<option value='1'>LIGHT</option>
-					<option value='2'>MODEM</option>
-				</select></td>
-			</tr>
-			<tr>
-				<td class="label">Max connections:</td>
-				<td><input title='1..8. Default: 4.' name='wifi_ap_mcns' maxlength='1' value='~wifi_ap_mcns~'></td>
-				<td class="label">Beacon (ms):</td>
-				<td><input title='100...60000' name='wifi_ap_bint' maxlength='5' value='~wifi_ap_bint~'></td>
-			</tr>
-			<tr>
-				<td class="label">RF Tx Power:</td>
-				<td><input title='Current maximum RF Tx Power, unit: 0.25dBm, range 0..82' name='wifi_maxpw' maxlength='3' value='~wifi_maxpw~'></td>
-				<td class="label">ST Host Name:</td>
-				<td><input title='DHCP name' name='wifi_st_hostname' maxlength='31' value='~wifi_st_hostname~'></td>
-			</tr>
-		</table>
-		<p class="center">
-			<input type='submit' value='Set Config' class="button">
-			<input type='hidden' name='wifi_newcfg' value='0x2ffff'>
-		</p>
-		</form>
-	</div>
-~inc:footer.inc~
-<script type="text/javascript">
-var chlnum = document.forms[0].wifi_ap_chl;
-for (var i=1; i < 14; i++) {
-	chlnum.options[i] = new Option(((i<10)?'0':'')+i,i);
-}
-var cfg = {
-	wifi_ap_chl:"~wifi_ap_chl~",
-	wifi_ap_auth:"~wifi_ap_auth~",
-	wifi_phy:"~wifi_phy~",
-	wifi_mode:"~wifi_mode~",
-	wifi_sleep:"~wifi_sleep~",
-	wifi_st_aucn:"~wifi_st_aucn~",
-	wifi_st_sbss:"~wifi_st_sbss~",
-	wifi_ap_hssid:"~wifi_ap_hssid~",
-	wifi_ap_dhcp:"~wifi_ap_dhcp~",
-	wifi_st_dhcp:"~wifi_st_dhcp~",
-	wifi_st_sta:(~wifi_st_sta~>5)?6:~wifi_st_sta~
-}
-setFormValues(document.forms[0], cfg);
-</script>
+<html class="no-js">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <style type="text/css">
+        @charset "UTF-8";
+    </style>
+
+    <title>Wiren Board WI-FI Web UI</title>
+    <meta name="description" content="">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="./bootstrap.css">
+    <link rel="stylesheet" href="./main.css">
+<!--     <link rel="stylesheet" href="./angular-toggle-switch.css">
+    <link rel="stylesheet" href="./spectrum.css">
+    <link rel="stylesheet" href="./codemirror.css">
+    <link rel="stylesheet" href="./c3.css" type="text/css">
+    <link rel="stylesheet" href="./spinner.css"> -->
+    <style>
+        .ngf-hide {
+            display: none !important
+        }
+    </style>
+    <script src="/scripts.js"></script>
+</head>
+
+<body class="ng-scope">
+    <!--[if lt IE 7]>
+      <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+    <![endif]-->
+
+    <div id="wrapper">
+
+        <!-- Navigation -->
+        <nav class="navbar navbar-inverse navbar-fixed-top ng-scope" role="navigation" ng-controller="NavigationCtrl">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-ex1-collapse">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="./#/">Wiren Board WI-FI Web UI</a>
+
+                <!--<p class="navbar-text navbar-right connection-status">
+                    <span class="ng-binding">Settings</span>
+                </p> -->
+
+            </div>
+
+
+
+
+            <!-- Sidebar Menu Items - These collapse to the responsive navigation menu on small screens -->
+            <div class="collapse navbar-collapse navbar-ex1-collapse">
+                <ul class="nav navbar-nav side-nav">
+                    <li class="">
+                        <a href="home.htm"><i class=""></i> Home</a>
+                    </li>
+
+                    <li class="active">
+                        <a href="wifi.htm"><i class=""></i> Wi-Fi Settings</a>
+                    </li>
+
+                    <li class="">
+                        <a href="rs485.htm"><i class=""></i> RS485 Settings</a>
+                    </li>
+
+                </ul>
+            </div>
+            <!-- /.navbar-collapse -->
+        </nav>
+
+
+
+
+        <div id="page-wrapper">
+            <div class="container-fluid">
+                <!-- Page Heading -->
+                <div class="row">
+                    <div class="col-lg-12">
+                        <div class="ng-scope">
+                            <div class="row ng-scope">
+                                <div class="col-lg-12">
+
+
+
+                                    <h1 class="page-header ng-binding">
+                                     Wi-Fi Settings
+                                     </h1>
+                                    <div id="widgets-list" class="multicol-list">
+                                        <ul class="list-unstyled">
+
+
+
+
+
+                                            <div class="content">
+                                                <form method='post' action='/timeout.htm'>
+                                                    <input type='hidden' name='wifi_rdcfg' value='0xffffffff'>
+
+                                                    <li class="form">
+                                                        <div class="panel panel-primary">
+                                                            <div class="panel-heading ">
+                                                                WiFi Mode settings
+                                                            </div>
+                                                            <div class="panel-body">
+                                                                <dashboard-widget-template>
+
+                                                                            <b>WiFi Mode:</b>
+                                                                             <select class="control-value" name='wifi_mode'>
+                                                                                <option value='1'>STATION_MODE</option>
+                                                                                <option value='2'>SOFTAP_MODE</option>
+                                                                                <option value='3'>STATIONAP_MODE</option>
+                                                                            </select>
+
+                                                                        
+                                                                </dashboard-widget-template>
+                                                            </div>
+                                                        </div>
+                                                    </li>
+
+                                                    <li class="form">
+                                                        <div class="panel panel-primary">
+                                                            <div class="panel-heading ">
+                                                                AP settings:
+                                                            </div>
+                                                            <div class="panel-body">
+                                                                <dashboard-widget-template>
+
+
+                                                                    <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">AP SSID:</h4>
+                                                                            <input class="control-value" type="text" name='wifi_ap_ssid' maxlength='31' value='~wifi_ap_ssid~'>
+                                                                        </device-control>
+                                                                    </div>
+                                                                    <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">Hidden SSID:</h4>
+                                                                            <input class="control-value" type='hidden' name='wifi_ap_hssid' value='0'>
+                                                                            <input class="control-value" type='checkbox' name='wifi_ap_hssid' value='1'>
+                                                                        </device-control>
+                                                                    </div>
+
+                                                                    <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">AP Password:</h4>
+                                                                            <input class="control-value" type="text" name='wifi_ap_psw' maxlength='63' value='~wifi_ap_psw~'>
+                                                                        </device-control>
+                                                                    </div>
+
+                                                                    <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">Auth Mode:</h4>
+                                                                            <select class="control-value" title="Don't support AUTH_WEP in softAP mode" name='wifi_ap_auth'>
+                                                                                <option value='0'>OPEN</option>
+                                                                                <option value='1'>WEP</option>
+                                                                                <option value='2'>WPA_PSK</option>
+                                                                                <option value='3'>WPA2_PSK</option>
+                                                                                <option value='4'>WPA_WPA2_PSK</option>
+                                                                            </select>
+                                                                        </device-control>
+                                                                    </div>
+
+                                                                    <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">Channel:</h4>
+                                                                            <select class="control-value" name='wifi_ap_chl'>
+                                                                                <option value='0'>auto</option>
+                                                                            </select>
+                                                                        </device-control>
+                                                                    </div>
+
+                                                                    <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">IEEE PHY:</h4>
+                                                                            <select class="control-value" name='wifi_phy'>
+                                                                                <option value='1'>802.11b</option>
+                                                                                <option value='2'>802.11g</option>
+                                                                                <option value='3'>802.11n</option>
+                                                                            </select>
+                                                                        </device-control>
+                                                                    </div>
+
+                                                                    <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">IP:</h4>
+                                                                            <input class="control-value" type="text" name='wifi_ap_ip' maxlength='31' value='~wifi_ap_ip~'>
+                                                                        </device-control>
+                                                                    </div>
+
+                                                                    <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">Subnet Mask:</h4>
+                                                                            <input class="control-value" type="text" name='wifi_ap_msk' maxlength='31' value='~wifi_ap_msk~'>
+                                                                        </device-control>
+                                                                    </div>
+
+                                                                    <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">Gateway: </h4>
+                                                                            <input class="control-value" type="text" name='wifi_ap_gw' maxlength='31' value='~wifi_ap_gw~'>
+                                                                        </device-control>
+                                                                    </div>
+
+                                                                    <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">MAC: </h4>
+                                                                            <input class="control-value" type="text" name='wifi_ap_mac' maxlength='17' value='~wifi_ap_mac~'>
+                                                                        </device-control>
+                                                                    </div>
+
+                                                                    <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">DHCP: </h4>
+                                                                            <input class="control-value" type='hidden' name='wifi_ap_dhcp' value='0'>
+                                                                            <input class="control-value" type='checkbox' name='wifi_ap_dhcp' value='1'>
+                                                                        </device-control>
+                                                                    </div>
+
+                                                                    <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">Start IP: </h4>
+                                                                            <input class="control-value" type="text" name='wifi_ap_sip' maxlength='31' value='~wifi_ap_sip~'>
+                                                                        </device-control>
+                                                                    </div>
+
+                                                                    <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">End IP: </h4>
+                                                                            <input class="control-value" type="text" name='wifi_ap_eip' maxlength='31' value='~wifi_ap_eip~'>
+                                                                        </device-control>
+                                                                    </div>
+
+                                                                    <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">Max connections: </h4>
+                                                                            <input class="control-value" type="text" title='1..8. Default: 4.' name='wifi_ap_mcns' maxlength='1' value='~wifi_ap_mcns~'>
+                                                                        </device-control>
+                                                                    </div>
+
+                                                                    <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">RF Tx Power: </h4>
+                                                                            <input class="control-value" type="text" title='Current maximum RF Tx Power, unit: 0.25dBm, range 0..82' name='wifi_maxpw' maxlength='3' value='~wifi_maxpw~'>
+                                                                        </device-control>
+                                                                    </div>
+
+
+
+                                                                </dashboard-widget-template>
+                                                            </div>
+                                                        </div>
+                                                    </li>
+
+                                                    <li class="form">
+                                                        <div class="panel panel-primary">
+                                                            <div class="panel-heading ">
+                                                                Station settings:
+                                                            </div>
+                                                            <div class="panel-body">
+                                                                <dashboard-widget-template>
+
+                                                                    <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">SSID: </h4>
+                                                                            <input class="control-value" type="text" name='wifi_st_ssid' maxlength='31' value='~wifi_st_ssid~'>
+                                                                        </device-control>
+                                                                    </div>
+                                                                        
+                                                                      <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">Password: </h4>
+                                                                            <input class="control-value" type="text" name='wifi_st_psw' maxlength='63' value='~wifi_st_psw~'>
+                                                                        </device-control>
+                                                                      </div>
+
+                                                                      <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">AutoConnect: </h4>
+                                                                            <input class="control-value" type='hidden' name='wifi_st_aucn' value='0'>
+                                                                            <input class="control-value" type='checkbox' name='wifi_st_aucn' value='1'>
+                                                                        </device-control>
+                                                                      </div>                                                                        
+                                                                            
+                                                                        
+                                                                      <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">ST Host Name: </h4>
+                                                                            <input class="control-value" type="text" title='DHCP name' name='wifi_st_hostname' maxlength='31' value='~wifi_st_hostname~'>
+                                                                        </device-control>
+                                                                      </div>
+                                                                        
+                                                                            
+                                                                </dashboard-widget-template>
+                                                            </div>
+                                                        </div>
+                                                    </li>
+
+                                                    <li class="form">
+                                                        <div class="panel panel-primary">
+                                                            <div class="panel-heading ">
+                                                                Station advanced settings:
+                                                            </div>
+                                                            <div class="panel-body">
+                                                                <dashboard-widget-template>
+
+                                                                       <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">BSSID: </h4>
+                                                                            <input class="control-value" type="text" name='wifi_st_bssid' maxlength='17' value='~wifi_st_bssid~'>
+                                                                        </device-control>
+                                                                      </div>    
+
+                                                                       <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">Use BSSID: </h4>
+                                                                            <input class="control-value" type='hidden' name='wifi_st_sbss' value='0'>
+                                                                            <input class="control-value" type='checkbox' name='wifi_st_sbss' value='1'>
+                                                                        </device-control>
+                                                                      </div>  
+
+                                                                                                                                
+                                                                       <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">IP: </h4>
+                                                                            <input class="control-value" type='text' title='Static ip, if dhcp: off' name='wifi_st_ip' maxlength='31' value='~wifi_st_ip~'>
+                                                                        </device-control>
+                                                                      </div> 
+
+                                                                       <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">Subnet Mask: </h4>
+                                                                            <input class="control-value" type='text' name='wifi_st_msk' maxlength='31' value='~wifi_st_msk~'>
+                                                                        </device-control>
+                                                                      </div> 
+
+                                                                        <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">Gateway: </h4>
+                                                                            <input class="control-value" type='text' name='wifi_st_gw' maxlength='31' value='~wifi_st_gw~'>
+                                                                        </device-control>
+                                                                      </div>                                                                             
+                                                                        <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">ReConnect: </h4>
+                                                                            <input class="control-value" type='text' name='wifi_st_rect' title='Reconnect 2..8192 sec. =0 reconnect off, =1 standard reconnect' maxlength='4' value='~wifi_st_rect~'>
+                                                                        </device-control>
+                                                                      </div>                                                                            
+                                                                         <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">MAC: </h4>
+                                                                            <input class="control-value" type='text' name='wifi_st_mac' maxlength='17' value='~wifi_st_mac~'>
+                                                                        </device-control>
+                                                                      </div>                                                                         
+                                                                         <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">DHCP: </h4>
+                                                                            <input class="control-value" type='hidden' name='wifi_st_dhcp' value='0'>
+                                                                            <input class="control-value" type='checkbox' title='Off: static ip, On: dhcp' name='wifi_st_dhcp' value='1'>
+                                                                        </device-control>
+                                                                      </div>  
+                                                                       
+                                                                         <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">RSSI: </h4>
+                                                                            <b class="control-value"> ~wifi_st_rssi~ dB </b>
+                                                                        </device-control>
+                                                                      </div>                                                                             
+                                                                          <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">Sleep Mode: </h4>
+                                                                            <select class="control-value" title='Not use LIGHT = TCP errors.' name='wifi_sleep'>
+                                                                                <option value='0'>NONE</option>
+                                                                                <option value='1'>LIGHT</option>
+                                                                                <option value='2'>MODEM</option>
+                                                                            </select>                                                                            
+                                                                        </device-control>
+                                                                      </div>                                                                         
+                                                                         <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">Beacon (ms): </h4>
+                                                                            <input class="control-value" type='text' title='100...60000' name='wifi_ap_bint' maxlength='5' value='~wifi_ap_bint~'>
+                                                                        </device-control>
+                                                                      </div>       
+                                                                       <div class="control-wrapper">
+                                                                        <device-control>
+                                                                            <h4 class="ng-binding">Status: </h4>
+                                                                            <select name='wifi_st_sta' class="control-value" >
+                                                                                <option value='0'>Idle</option>
+                                                                                <option value='1'>Connecting</option>
+                                                                                <option value='2'>WRONG_PWD</option>
+                                                                                <option value='3'>NO_AP</option>
+                                                                                <option value='4'>FAIL</option>
+                                                                                <option value='5'>GOT_IP</option>
+                                                                                <option value='6'>OFF</option>
+                                                                            </select>
+                                                                        </device-control>
+                                                                      </div>                  
+                                                                </dashboard-widget-template>
+                                                            </div>
+                                                        </div>
+                                                    </li>
+
+                                                    <li class="form">
+                                                        <div class="panel panel-primary">
+                                                            <div class="panel-heading ">
+                                                                Save Settings
+                                                            </div>
+                                                            <div class="panel-body">
+                                                                <dashboard-widget-template>
+
+
+                                                    <p class="center">
+                                                        <input type='submit' value='Save Config' class="button">
+                                                        <input type='hidden' name='wifi_newcfg' value='0x2ffff'>
+                                                    </p>
+                                                                </dashboard-widget-template>
+                                                            </div>
+                                                        </div>
+                                                    </li>
+
+
+
+                                                </form>
+                                            </div>
+
+
+
+
+
+                                        </ul>
+                                    </div>
+
+
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- /.row -->
+
+                <!-- Page Footer -->
+                <div class="row" style="height:40px;">
+                    <footer>
+                        <a href="http://contactless.ru/"><img src="./contactless.png" alt="Contactless" title="Contactless - Бесконтактные устройства" style="margin-right:15px;">
+                        </a>
+                    </footer>
+                </div>
+                <!-- /footer -->
+            </div>
+            <!-- /.container-fluid -->
+
+        </div>
+        <!-- /#page-wrapper -->
+    </div>
+    
+    <script src="./jquery.js"></script>
+    <script src="./bootstrap.js"></script>
+
+    <script type="text/javascript">
+        var chlnum = document.forms[0].wifi_ap_chl;
+        for (var i = 1; i < 14; i++) {
+            chlnum.options[i] = new Option(((i < 10) ? '0' : '') + i, i);
+        }
+        var cfg = {
+            wifi_ap_chl: "~wifi_ap_chl~",
+            wifi_ap_auth: "~wifi_ap_auth~",
+            wifi_phy: "~wifi_phy~",
+            wifi_mode: "~wifi_mode~",
+            wifi_sleep: "~wifi_sleep~",
+            wifi_st_aucn: "~wifi_st_aucn~",
+            wifi_st_sbss: "~wifi_st_sbss~",
+            wifi_ap_hssid: "~wifi_ap_hssid~",
+            wifi_ap_dhcp: "~wifi_ap_dhcp~",
+            wifi_st_dhcp: "~wifi_st_dhcp~",
+            wifi_st_sta: (~wifi_st_sta~ > 5) ? 6 : ~wifi_st_sta~
+        }
+        setFormValues(document.forms[0], cfg);
+    </script>
+
+
 </body>
+
 </html>
