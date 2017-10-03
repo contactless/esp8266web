@@ -77,6 +77,7 @@ uint8 tcp2uart_ajax_rx(TCP_SERV_CONN *ts_conn, uint16 tmo) ICACHE_FLASH_ATTR;
 
 extern suart_drv uart_drv;
 extern TCP_SERV_CONN * tcp2uart_conn;
+extern err_t tcp2uart_conn_last_error;
 extern TCP_SERV_CFG * tcp2uart_servcfg;
 
 #endif // USE_TCP2UART

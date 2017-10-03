@@ -44,6 +44,59 @@ static void tcpsrv_error(void *arg, err_t err) ICACHE_FLASH_ATTR;
 static err_t tcpsrv_connected(void *arg, struct tcp_pcb *tpcb, err_t err) ICACHE_FLASH_ATTR;
 static void tcpsrv_client_connect(TCP_SERV_CONN * ts_conn) ICACHE_FLASH_ATTR;
 static void tcpsrv_client_reconnect(TCP_SERV_CONN * ts_conn) ICACHE_FLASH_ATTR;
+
+#if DEBUGSOO > 2
+static const char* tcpsrv_srvconn_state_msg(enum srvconn_state state)
+{
+	switch (state) {
+	case SRVCONN_NONE:
+		return "NONE";
+	case SRVCONN_CLIENT:
+		return "CLIENT";
+	case SRVCONN_CLOSED:
+		return "CLOSED";
+	case SRVCONN_CLOSEWAIT:
+		return "CLOSEWAIT";
+	case SRVCONN_CONNECT:
+		return "CONNECT";
+	case SRVCONN_LISTEN:
+		return "LISTEN";
+	default:
+		return "<unknown state>";
+	}
+}
+
+static const char* tcpsrv_tcp_state_msg(enum tcp_state state)
+{
+	switch (state) {
+	case CLOSED:
+		return "CLOSED";
+	case LISTEN:
+		return "LISTEN";
+	case SYN_SENT:
+		return "SYN_SENT";
+	case SYN_RCVD:
+		return "SYN_RCVD";
+	case ESTABLISHED:
+		return "ESTABLISHED";
+	case FIN_WAIT_1:
+		return "FIN_WAIT_1";
+	case FIN_WAIT_2:
+		return "FIN_WAIT_2";
+	case CLOSE_WAIT:
+		return "CLOSE_WAIT";
+	case CLOSING:
+		return "CLOSING";
+	case LAST_ACK:
+		return "LAST_ACK";
+	case TIME_WAIT:
+		return "TIME_WAIT";
+	default:
+		return "<unknown state>";
+	}
+}
+#endif
+
 /******************************************************************************
  * FunctionName : tcpsrv_print_remote_info
  * Description  : выводит remote_ip:remote_port [conn_count] os_printf("srv x.x.x.x:x [n] ")
@@ -423,12 +476,12 @@ static void ICACHE_FLASH_ATTR tcpsrv_server_close(TCP_SERV_CONN * ts_conn) {
 	struct tcp_pcb *pcb = ts_conn->pcb;
 	if(pcb == NULL) {
 #if DEBUGSOO > 3
-		os_printf("tcpsrv_server_close, state: %s, pcb = NULL!\n", tspsrv_srvconn_state_msg(ts_conn->state));
+		os_printf("tcpsrv_server_close, state: %s, pcb = NULL!\n", tcpsrv_srvconn_state_msg(ts_conn->state));
 #endif
 		return;
 	}
 #if DEBUGSOO > 3
-	os_printf("tcpsrv_server_close[%d], state: %s\n", pcb->local_port, tspsrv_srvconn_state_msg(ts_conn->state));
+	os_printf("tcpsrv_server_close[%d], state: %s\n", pcb->local_port, tcpsrv_srvconn_state_msg(ts_conn->state));
 #endif
 	if(ts_conn->state != SRVCONN_CLOSEWAIT && ts_conn->state != SRVCONN_CLOSED) {
 #if DEBUGSOO > 2
@@ -528,7 +581,7 @@ static err_t ICACHE_FLASH_ATTR tcpsrv_poll(void *arg, struct tcp_pcb *pcb) {
 	}
 #if DEBUGSOO > 3
 	tcpsrv_print_remote_info(ts_conn);
-	os_printf("poll: %d %s#%s, %d,%d, pcb:%p\n", ts_conn->recv_check, tspsrv_srvconn_state_msg(ts_conn->state), tspsrv_tcp_state_msg(pcb->state), ts_conn->pcfg->time_wait_rec, ts_conn->pcfg->time_wait_cls), pcb;
+	os_printf("poll: %d %s#%s, %d,%d, pcb:%p\n", ts_conn->recv_check, tcpsrv_srvconn_state_msg(ts_conn->state), tcpsrv_tcp_state_msg(pcb->state), ts_conn->pcfg->time_wait_rec, ts_conn->pcfg->time_wait_cls, pcb);
 #endif
 	if (ts_conn->pcb != NULL && ts_conn->state != SRVCONN_CLOSEWAIT) {
 		ts_conn->recv_check++;
@@ -654,7 +707,6 @@ static void ICACHE_FLASH_ATTR tcpsrv_list_delete(TCP_SERV_CONN * ts_conn) {
  *		err -- Error code to indicate why the pcb has been closed
  * Returns      : none
  *******************************************************************************/
-#if DEBUGSOO > 2
 static const char srvContenErr00[] ICACHE_RODATA_ATTR = "Ok";						// ERR_OK          0
 static const char srvContenErr01[] ICACHE_RODATA_ATTR = "Out of memory error";		// ERR_MEM        -1
 static const char srvContenErr02[] ICACHE_RODATA_ATTR = "Buffer error";				// ERR_BUF        -2
@@ -690,7 +742,19 @@ const char * srvContenErr[]  =  {
 	srvContenErr14,
 	srvContenErr15
 };
-#endif
+
+const char *tcpsrv_error_msg(err_t err)
+{
+	if (err > 0) {
+		err = 0;
+	}
+
+	if (err < -15) {
+		return "<unknown error>";
+	}
+
+	return srvContenErr[-err];
+}
 //-----------------------------------------------------------------------------
 static void tspsrv_delete_pcb(TCP_SERV_CONN * ts_conn)
 {
@@ -708,22 +772,33 @@ static void tspsrv_delete_pcb(TCP_SERV_CONN * ts_conn)
 	tcpsrv_list_delete(ts_conn);
 }
 //-----------------------------------------------------------------------------
+
+
+extern err_t tcp2uart_conn_last_error; // DIRTY, DIRTY, DIRTY
+
 static void ICACHE_FLASH_ATTR tcpsrv_error(void *arg, err_t err) {
 	TCP_SERV_CONN * ts_conn = arg;
 //	struct tcp_pcb *pcb = NULL;
 	if (ts_conn != NULL) {
 #if DEBUGSOO > 2
 		tcpsrv_print_remote_info(ts_conn);
-		os_printf("error %d (%s)\n", err, tspsrv_error_msg(err));
+		os_printf("error %d (%s)\n", err, tcpsrv_error_msg(err));
 #elif DEBUGSOO > 1
 		tcpsrv_print_remote_info(ts_conn);
 #ifdef LWIP_DEBUG
-		os_printf("error %d (%s)\n", err, tspsrv_error_msg(err));
+		os_printf("error %d (%s)\n", err, tcpsrv_error_msg(err));
 #else
 		os_printf("error %d\n", err);
 #endif
 #endif
 		if (ts_conn->state != SRVCONN_CLOSEWAIT) {
+			// don't retry on fatal errors like reset or abort
+			if (err == ERR_ABRT || err == ERR_RST || err == ERR_CLSD) {
+				os_printf("tcp fatal connection error (%d)\n", err);
+				tcp2uart_conn_last_error = err;
+				return;
+			}
+
 			if(ts_conn->flag.client && // если данное соединение клиент
 			(ts_conn->flag.client_reconnect // вечный реконнект
 					|| (ts_conn->state == SRVCONN_CLIENT // установка соединения
@@ -778,7 +853,7 @@ static void ICACHE_FLASH_ATTR tcpsrv_client_connect(TCP_SERV_CONN * ts_conn)
 				tcp_arg(pcb, ts_conn); // Allocate client-specific session structure, set as callback argument
 				// Set up the various callback functions
 				tcp_err(pcb, tcpsrv_error);
-				tcp_poll(pcb, tcpsrv_poll, 1); // every 1 seconds
+				//tcp_poll(pcb, tcpsrv_poll, 1); // every 1 seconds
 				err = tcp_connect(pcb, (ip_addr_t *)&ts_conn->remote_ip, ts_conn->remote_port, tcpsrv_connected);
 #if DEBUGSOO > 2
 				os_printf("tcp_connect() = %d\n", err);
@@ -806,6 +881,13 @@ static void ICACHE_FLASH_ATTR tcpsrv_client_connect(TCP_SERV_CONN * ts_conn)
 static err_t ICACHE_FLASH_ATTR tcpsrv_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
 {
 	TCP_SERV_CONN * ts_conn = arg;
+
+	if (err != ERR_OK) {
+		os_printf("tcp connection error: %d\n", err);
+		tcp2uart_conn_last_error = err; // set flag for web interface
+		return err;
+	}
+
 	err_t merr = ERR_OK;
 	if (ts_conn != NULL) {
 		os_timer_disarm(&ts_conn->ptimer);

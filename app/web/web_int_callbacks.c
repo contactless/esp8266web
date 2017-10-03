@@ -941,8 +941,11 @@ void ICACHE_FLASH_ATTR web_int_callback(TCP_SERV_CONN *ts_conn, uint8 *cstr)
         	ifcmp("remote") {
         		if(uart_drv.uart_rx_buf != NULL && tcp2uart_conn != NULL) {
 	        		tcp_puts(IPSTR ":%d", IP2STR(&(tcp2uart_conn->remote_ip.dw)), tcp2uart_conn->remote_port);
+        		} else if (tcp2uart_conn_last_error != ERR_OK && tcp2uart_conn_last_error != ERR_CLSD) {
+        			tcp_strcpy_fd("error");
+        		} else {
+        			tcp_strcpy_fd("closed");
         		}
-        		else tcp_strcpy_fd("closed");
         	}
         	else ifcmp("host") {
         		if(uart_drv.uart_rx_buf != NULL && tcp2uart_conn != NULL && tcp2uart_conn->pcb != NULL) tcp_puts(IPSTR ":%d", IP2STR(&(tcp2uart_conn->pcb->local_ip.addr)), tcp2uart_conn->pcb->local_port);

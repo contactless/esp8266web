@@ -178,4 +178,6 @@ err_t tcpsrv_close(TCP_SERV_CFG *p) ICACHE_FLASH_ATTR;
 err_t tcpsrv_close_port(uint16 portn) ICACHE_FLASH_ATTR;
 err_t tcpsrv_close_all(void) ICACHE_FLASH_ATTR;
 
+const char *tcpsrv_error_msg(err_t err);
+
 #endif // __TCP_SERV_CONN_H__

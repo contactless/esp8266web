@@ -25,6 +25,7 @@
 #define mMIN(a, b)  ((a<b)?a:b)
 
 TCP_SERV_CONN * tcp2uart_conn DATA_IRAM_ATTR;
+err_t tcp2uart_conn_last_error = 0; // for web interface
 TCP_SERV_CFG * tcp2uart_servcfg DATA_IRAM_ATTR;
 /*
 //-------------------------------------------------------------------------------
