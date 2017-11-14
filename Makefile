@@ -4,7 +4,7 @@
 #
 #############################################################
 
-ESPOPTION ?= -p COM7 -b 460800
+ESPOPTION ?= -p /dev/ttyUSB0 -b 460800
 
 UPLOADADDR = http://aesp8266/fsupload
 
@@ -36,30 +36,37 @@ DEFAULTADDR := $(shell printf '0x%X\n' $$(($(SPI_SIZE)*1024 - 4*4096)))
 BLANKBIN := ./$(FIRMWAREDIR)/blank.bin
 #BLANKADDR := 0x7E000
 BLANKADDR := $(shell printf '0x%X\n' $$(($(SPI_SIZE)*1024 - 2*4096)))
+
 CWD ?=$(PDIR)
 WEB_BASE := $(subst \,/,$(CWD))
 
 # Base directory for the compiler
-XTENSA_TOOLS_ROOT ?= c:/Espressif/xtensa-lx106-elf/bin
+ifeq ($(OS),Windows_NT)
+XTENSA_TOOLS_ROOT ?= c:/Espressif/xtensa-lx106-elf/bin/
+PYTHON ?= C:/Python27/python.exe
+else
+XTENSA_TOOLS_ROOT ?=
+PYTHON ?= python
+endif
 
 #PATH := $(XTENSA_TOOLS_ROOT);$(PATH)
 # base directory of the ESP8266 SDK package, absolute
 #SDK_BASE	?= c:/Espressif/ESP8266_SDK
 
 # select which tools to use as compiler, librarian and linker
-CC := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
-AR := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-ar
-LD := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
-NM := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-nm
-CPP = $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-cpp
-OBJCOPY = $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-objcopy
-OBJDUMP := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-objdump
+CC := $(XTENSA_TOOLS_ROOT)xtensa-lx106-elf-gcc
+AR := $(XTENSA_TOOLS_ROOT)xtensa-lx106-elf-ar
+LD := $(XTENSA_TOOLS_ROOT)xtensa-lx106-elf-gcc
+NM := $(XTENSA_TOOLS_ROOT)xtensa-lx106-elf-nm
+CPP = $(XTENSA_TOOLS_ROOT)xtensa-lx106-elf-cpp
+OBJCOPY = $(XTENSA_TOOLS_ROOT)xtensa-lx106-elf-objcopy
+OBJDUMP := $(XTENSA_TOOLS_ROOT)xtensa-lx106-elf-objdump
 
 SDK_TOOLS	?= c:/Espressif/utils
 #ESPTOOL		?= $(SDK_TOOLS)/esptool
-ESPTOOL	?= C:/Python27/python.exe $(WEB_BASE)esptool.py
-OVLTOOL ?= C:/Python27/python.exe $(WEB_BASE)ovls.py
-UPLOADTOOL ?= C:/Python27/python.exe $(WEB_BASE)uploader.py
+ESPTOOL	?= $(PYTHON) $(WEB_BASE)esptool.py
+OVLTOOL ?= $(PYTHON) $(WEB_BASE)ovls.py
+UPLOADTOOL ?= $(PYTHON) $(WEB_BASE)uploader.py
 
 CSRCS ?= $(wildcard *.c)
 ASRCs ?= $(wildcard *.s)
